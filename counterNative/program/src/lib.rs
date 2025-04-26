@@ -14,6 +14,29 @@ pub struct Counter {
     pub counter: u64,
 }
 
+#[entrypoint]
+pub fn process_counter(ctx: &Context<ProcessCounter>) -> ProgramResult {
+    msg!("Processing counter...");
+
+    let accounts_iter = &mut ctx.accounts.iter();
+    let account = next_account_info(accounts_iter)?;
+
+    if !account.is_signer {
+        msg!("Account is not signed. Unauthorized access.");
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    let mut counter_data = Counter::try_from_slice(&account.data.borrow())?;
+    msg!("Current counter value: {}", counter_data.counter);
+
+    counter_data.counter += 1;
+
+    counter_data.serialize(&mut &mut account.data.borrow_mut()[..])?;
+    msg!("Counter incremented successfully. New value: {}", counter_data.counter);
+
+    Ok(())
+}
+
 #[macro_export]
 macro_rules! compute_fn {
     ($msg:expr=> $($tt:tt)*) => {
